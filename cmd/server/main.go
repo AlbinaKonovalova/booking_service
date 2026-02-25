@@ -13,7 +13,9 @@ import (
 	_ "github.com/lib/pq"
 
 	httpserver "github.com/AlbinaKonovalova/booking_service/internal/adapters/http"
+	"github.com/AlbinaKonovalova/booking_service/internal/adapters/http/handlers"
 	"github.com/AlbinaKonovalova/booking_service/internal/adapters/repository/postgres"
+	"github.com/AlbinaKonovalova/booking_service/internal/application"
 	"github.com/AlbinaKonovalova/booking_service/internal/config"
 )
 
@@ -34,25 +36,32 @@ func main() {
 
 	db, err := setupDatabase(cfg.Database)
 	if err != nil {
-		logger.Info("Failed to connect to database, %s", slog.Any("error", err))
-		//logger.Error("failed to connrct to database", slog.Any("error", err))
-		//os.Exit(1)
+		logger.Error("Failed to connect to database", slog.Any("error", err))
+		os.Exit(1)
 	}
 	defer db.Close()
 	logger.Info("connected to database")
 
-	_ = postgres.NewRepository(db)
+	// Repositories
+	resourceRepo := postgres.NewResourceRepository(db)
+
+	// Application services
+	resourceService := application.NewResourceService(resourceRepo)
+
+	// HTTP handlers
+	resourceHandler := handlers.NewResourceHandler(resourceService)
 
 	server := httpserver.NewServer(
 		cfg.Server.Port,
 		cfg.Server.ReadTimeout,
 		cfg.Server.WriteTimeout,
 		logger,
+		resourceHandler,
 	)
 
 	go func() {
 		if err := server.Start(); err != nil && err != http.ErrServerClosed {
-			logger.Error("server error", slog.Any("errror", err))
+			logger.Error("server error", slog.Any("error", err))
 			os.Exit(1)
 		}
 	}()

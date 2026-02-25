@@ -6,13 +6,15 @@ import (
 	"log/slog"
 	"net/http"
 	"time"
+
+	"github.com/AlbinaKonovalova/booking_service/internal/adapters/http/handlers"
 )
 
 // Server представляет HTTP сервер
 type Server struct {
-	server *http.Server
-
-	logger *slog.Logger
+	server          *http.Server
+	resourceHandler *handlers.ResourceHandler
+	logger          *slog.Logger
 }
 
 func NewServer(
@@ -20,9 +22,11 @@ func NewServer(
 	readTimeout time.Duration,
 	writeTimeout time.Duration,
 	logger *slog.Logger,
+	resourceHandler *handlers.ResourceHandler,
 ) *Server {
 	s := &Server{
-		logger: logger,
+		resourceHandler: resourceHandler,
+		logger:          logger,
 	}
 
 	mux := s.setupRoutes()
@@ -44,6 +48,8 @@ func (s *Server) setupRoutes() *http.ServeMux {
 		w.WriteHeader(http.StatusOK)
 		w.Write([]byte(`{"status":"ok"}`)) //nolint:errchek // it's ok
 	})
+
+	mux.HandleFunc("POST /resource", s.resourceHandler.Create)
 
 	return mux
 }

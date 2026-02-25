@@ -9,12 +9,15 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
+// Config представляет конфигурацию приложения
 type Config struct {
 	Server   ServerConfig   `yaml:"server"`
 	Database DatabaseConfig `yaml:"database"`
+	Hotel    HotelConfig    `yaml:"hotel"`
 	Log      LogConfig      `yaml:"log"`
 }
 
+// ServerConfig конфигурация HTTP сервера
 type ServerConfig struct {
 	Port            int           `yaml:"port"`
 	ReadTimeout     time.Duration `yaml:"read_timeout"`
@@ -22,6 +25,7 @@ type ServerConfig struct {
 	ShutdownTimeout time.Duration `yaml:"shutdown_timeout"`
 }
 
+// DatabaseConfig конфигурация базы данных
 type DatabaseConfig struct {
 	URL             string        `yaml:"url"`
 	MaxOpenConns    int           `yaml:"max_open_conns"`
@@ -29,6 +33,17 @@ type DatabaseConfig struct {
 	ConnMaxLifetime time.Duration `yaml:"conn_max_lifetime"`
 }
 
+// CacheConfig конфигурация кэша
+type CacheConfig struct {
+	TTL time.Duration `yaml:"ttl"`
+}
+
+// HotelConfig конфигурация отеля
+type HotelConfig struct {
+	Timezone string `yaml:"timezone"`
+}
+
+// LogConfig конфигурация логирования
 type LogConfig struct {
 	Level  string `yaml:"level"`
 	Format string `yaml:"format"`
@@ -65,6 +80,7 @@ func (c *Config) loadFromFile(path string) error {
 		return err
 	}
 
+	// Раскрываем переменные окружения в YAML
 	expanded := os.ExpandEnv(string(data))
 
 	return yaml.Unmarshal([]byte(expanded), c)
@@ -87,7 +103,7 @@ func (c *Config) loadFromEnv() {
 			c.Server.WriteTimeout = d
 		}
 	}
-	if timeout := os.Getenv("SERVER_SUTDOWN_TIMEOUT"); timeout != "" {
+	if timeout := os.Getenv("SERVER_SHUTDOWN_TIMEOUT"); timeout != "" {
 		if d, err := time.ParseDuration(timeout); err == nil {
 			c.Server.ShutdownTimeout = d
 		}
@@ -97,18 +113,17 @@ func (c *Config) loadFromEnv() {
 	if url := os.Getenv("DATABASE_URL"); url != "" {
 		c.Database.URL = url
 	}
-
-	if oConns := os.Getenv("DB_MAX_OPEN_CONNS"); oConns != "" {
-		if n, err := strconv.Atoi(oConns); err == nil {
+	if conns := os.Getenv("DB_MAX_OPEN_CONNS"); conns != "" {
+		if n, err := strconv.Atoi(conns); err == nil {
 			c.Database.MaxOpenConns = n
 		}
 	}
-	if iConns := os.Getenv("DB_MAX_IDLE_CONNS"); iConns != "" {
-		if n, err := strconv.Atoi(iConns); err == nil {
+	if conns := os.Getenv("DB_MAX_IDLE_CONNS"); conns != "" {
+		if n, err := strconv.Atoi(conns); err == nil {
 			c.Database.MaxIdleConns = n
 		}
 	}
-	if lifetime := os.Getenv("DB_CONNS_MAX_LIFETIME"); lifetime != "" {
+	if lifetime := os.Getenv("DB_CONN_MAX_LIFETIME"); lifetime != "" {
 		if d, err := time.ParseDuration(lifetime); err == nil {
 			c.Database.ConnMaxLifetime = d
 		}
@@ -121,9 +136,15 @@ func (c *Config) loadFromEnv() {
 	if format := os.Getenv("LOG_FORMAT"); format != "" {
 		c.Log.Format = format
 	}
+
+	// Hotel
+	if tz := os.Getenv("HOTEL_TIMEZONE"); tz != "" {
+		c.Hotel.Timezone = tz
+	}
 }
 
 func (c *Config) setDefaults() {
+	// Server defaults
 	if c.Server.Port == 0 {
 		c.Server.Port = 8080
 	}
@@ -134,11 +155,12 @@ func (c *Config) setDefaults() {
 		c.Server.WriteTimeout = 10 * time.Second
 	}
 	if c.Server.ShutdownTimeout == 0 {
-		c.Server.ShutdownTimeout = 10 * time.Second
+		c.Server.ShutdownTimeout = 5 * time.Second
 	}
 
+	// Database defaults
 	if c.Database.URL == "" {
-		c.Database.URL = "postgres://postgres:postgres@localhost:5432/<base>?sslmode=disable"
+		c.Database.URL = "postgres://postgres:postgres@localhost:5432/booking_service?sslmode=disable"
 	}
 	if c.Database.MaxOpenConns == 0 {
 		c.Database.MaxOpenConns = 25
@@ -150,11 +172,17 @@ func (c *Config) setDefaults() {
 		c.Database.ConnMaxLifetime = 5 * time.Minute
 	}
 
+	// Log defaults
 	if c.Log.Level == "" {
 		c.Log.Level = "info"
 	}
 	if c.Log.Format == "" {
 		c.Log.Format = "json"
+	}
+
+	// Hotel defaults
+	if c.Hotel.Timezone == "" {
+		c.Hotel.Timezone = "Europe/Moscow"
 	}
 }
 
