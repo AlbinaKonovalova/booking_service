@@ -14,18 +14,22 @@ import (
 type Server struct {
 	server          *http.Server
 	resourceHandler *handlers.ResourceHandler
+	bookingHandler  *handlers.BookingHandler
 	logger          *slog.Logger
 }
 
+// NewServer создает новый HTTP сервер
 func NewServer(
 	port int,
 	readTimeout time.Duration,
 	writeTimeout time.Duration,
 	logger *slog.Logger,
 	resourceHandler *handlers.ResourceHandler,
+	bookingHandler *handlers.BookingHandler,
 ) *Server {
 	s := &Server{
 		resourceHandler: resourceHandler,
+		bookingHandler:  bookingHandler,
 		logger:          logger,
 	}
 
@@ -46,10 +50,14 @@ func (s *Server) setupRoutes() *http.ServeMux {
 
 	mux.HandleFunc("GET /health", func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
-		w.Write([]byte(`{"status":"ok"}`)) //nolint:errchek // it's ok
+		w.Write([]byte(`{"status":"ok"}`)) //nolint:errcheck // it's ok
 	})
 
+	// Resource endpoints
 	mux.HandleFunc("POST /resource", s.resourceHandler.Create)
+
+	// Booking endpoints
+	mux.HandleFunc("POST /booking", s.bookingHandler.Create)
 
 	return mux
 }
@@ -66,7 +74,7 @@ func (s *Server) loggingMiddleware(next http.Handler) http.Handler {
 
 		next.ServeHTTP(wrapped, r)
 
-		s.logger.Info("request comleted",
+		s.logger.Info("request completed",
 			slog.String("method", r.Method),
 			slog.String("path", r.URL.Path),
 			slog.Int("status", wrapped.statusCode),
@@ -89,9 +97,9 @@ func (s *Server) recoveryMiddleware(next http.Handler) http.Handler {
 
 func (s *Server) corsMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		w.Header().Set("Access-Control-Alllow-Origin", "*")
-		w.Header().Set("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE< OPTIONS")
-		w.Header().Set("Access-Contro-Allow-Headers", "Content-Type, Authorization")
+		w.Header().Set("Access-Control-Allow-Origin", "*")
+		w.Header().Set("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS")
+		w.Header().Set("Access-Control-Allow-Headers", "Content-Type, Authorization")
 
 		if r.Method == http.MethodOptions {
 			w.WriteHeader(http.StatusOK)
@@ -112,11 +120,13 @@ func (rw *responseWriter) WriteHeader(code int) {
 	rw.ResponseWriter.WriteHeader(code)
 }
 
+// Start запускает HTTP сервер
 func (s *Server) Start() error {
-	s.logger.Info("shutting down HTTP server")
+	s.logger.Info("starting HTTP server", slog.String("addr", s.server.Addr))
 	return s.server.ListenAndServe()
 }
 
+// Shutdown gracefully останавливает HTTP сервер
 func (s *Server) Shutdown(ctx context.Context) error {
 	s.logger.Info("shutting down HTTP server")
 	return s.server.Shutdown(ctx)

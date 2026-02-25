@@ -182,7 +182,7 @@ func (c *Config) setDefaults() {
 
 	// Hotel defaults
 	if c.Hotel.Timezone == "" {
-		c.Hotel.Timezone = "Europe/Moscow"
+		c.Hotel.Timezone = "UTC"
 	}
 }
 

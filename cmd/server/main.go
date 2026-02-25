@@ -9,6 +9,7 @@ import (
 	"os"
 	"os/signal"
 	"syscall"
+	"time"
 
 	_ "github.com/lib/pq"
 
@@ -36,20 +37,32 @@ func main() {
 
 	db, err := setupDatabase(cfg.Database)
 	if err != nil {
-		logger.Error("Failed to connect to database", slog.Any("error", err))
+		logger.Error("failed to connect to database", slog.Any("error", err))
 		os.Exit(1)
 	}
 	defer db.Close()
 	logger.Info("connected to database")
 
+	// Hotel timezone
+	hotelTZ, err := time.LoadLocation(cfg.Hotel.Timezone)
+	if err != nil {
+		logger.Error("failed to load hotel timezone", slog.Any("error", err))
+		os.Exit(1)
+	}
+	logger.Info("hotel timezone loaded", slog.String("timezone", cfg.Hotel.Timezone))
+
 	// Repositories
 	resourceRepo := postgres.NewResourceRepository(db)
+	bookingRepo := postgres.NewBookingRepository(db)
+	txManager := postgres.NewTxManager(db)
 
 	// Application services
 	resourceService := application.NewResourceService(resourceRepo)
+	bookingService := application.NewBookingService(bookingRepo, resourceRepo, txManager, hotelTZ)
 
 	// HTTP handlers
 	resourceHandler := handlers.NewResourceHandler(resourceService)
+	bookingHandler := handlers.NewBookingHandler(bookingService)
 
 	server := httpserver.NewServer(
 		cfg.Server.Port,
@@ -57,6 +70,7 @@ func main() {
 		cfg.Server.WriteTimeout,
 		logger,
 		resourceHandler,
+		bookingHandler,
 	)
 
 	go func() {
@@ -119,5 +133,4 @@ func setupDatabase(cfg config.DatabaseConfig) (*sql.DB, error) {
 	}
 
 	return db, nil
-
 }
