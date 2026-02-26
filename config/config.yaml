@@ -16,3 +16,7 @@ hotel:
 log:
   level: info
   format: json
+
+scheduler:
+  expiration_interval: 5m
+  completion_time: "11:50"

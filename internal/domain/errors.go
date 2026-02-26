@@ -20,4 +20,5 @@ var (
 	ErrBookingTooLong              = errors.New("booking duration exceeds maximum of 365 periods")
 	ErrBookingInvalidTransition    = errors.New("invalid booking status transition")
 	ErrBookingExpired              = errors.New("booking has expired")
+	ErrBookingNotYetCompleted      = errors.New("booking period has not ended yet")
 )

@@ -8,6 +8,7 @@ const (
 	StatusConfirmed BookingStatus = "CONFIRMED"
 	StatusCancelled BookingStatus = "CANCELLED"
 	StatusExpired   BookingStatus = "EXPIRED"
+	StatusCompleted BookingStatus = "COMPLETED"
 )
 
 // IsActive возвращает true, если бронирование блокирует ресурс.

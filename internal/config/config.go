@@ -11,10 +11,11 @@ import (
 
 // Config представляет конфигурацию приложения
 type Config struct {
-	Server   ServerConfig   `yaml:"server"`
-	Database DatabaseConfig `yaml:"database"`
-	Hotel    HotelConfig    `yaml:"hotel"`
-	Log      LogConfig      `yaml:"log"`
+	Server    ServerConfig    `yaml:"server"`
+	Database  DatabaseConfig  `yaml:"database"`
+	Hotel     HotelConfig     `yaml:"hotel"`
+	Log       LogConfig       `yaml:"log"`
+	Scheduler SchedulerConfig `yaml:"scheduler"`
 }
 
 // ServerConfig конфигурация HTTP сервера
@@ -47,6 +48,11 @@ type HotelConfig struct {
 type LogConfig struct {
 	Level  string `yaml:"level"`
 	Format string `yaml:"format"`
+}
+
+type SchedulerConfig struct {
+	ExpirationInterval time.Duration `yaml:"expiration_interval"`
+	CompletionTime     string        `yaml:"completion_time"`
 }
 
 // Load загружает конфигурацию из файла и переменных окружения
@@ -141,6 +147,15 @@ func (c *Config) loadFromEnv() {
 	if tz := os.Getenv("HOTEL_TIMEZONE"); tz != "" {
 		c.Hotel.Timezone = tz
 	}
+
+	if interval := os.Getenv("EXPIRATION_INTERVAL"); interval != "" {
+		if d, err := time.ParseDuration(interval); err == nil {
+			c.Scheduler.ExpirationInterval = d
+		}
+	}
+	if ct := os.Getenv("COMPLETION_TIME"); ct != "" {
+		c.Scheduler.CompletionTime = ct
+	}
 }
 
 func (c *Config) setDefaults() {
@@ -184,6 +199,13 @@ func (c *Config) setDefaults() {
 	if c.Hotel.Timezone == "" {
 		c.Hotel.Timezone = "UTC"
 	}
+
+	if c.Scheduler.ExpirationInterval == 0 {
+		c.Scheduler.ExpirationInterval = 5 * time.Minute
+	}
+	if c.Scheduler.CompletionTime == "" {
+		c.Scheduler.CompletionTime = "11:50"
+	}
 }
 
 func (c *Config) validate() error {
@@ -193,6 +215,10 @@ func (c *Config) validate() error {
 
 	if c.Database.URL == "" {
 		return fmt.Errorf("database URL is required")
+	}
+
+	if _, err := time.Parse("15:04", c.Scheduler.CompletionTime); err != nil {
+		return fmt.Errorf("invalid completion_time format (expected HH:MM): %s", c.Scheduler.CompletionTime)
 	}
 
 	return nil

@@ -16,6 +16,7 @@ import (
 	httpserver "github.com/AlbinaKonovalova/booking_service/internal/adapters/http"
 	"github.com/AlbinaKonovalova/booking_service/internal/adapters/http/handlers"
 	"github.com/AlbinaKonovalova/booking_service/internal/adapters/repository/postgres"
+	"github.com/AlbinaKonovalova/booking_service/internal/adapters/scheduler"
 	"github.com/AlbinaKonovalova/booking_service/internal/application"
 	"github.com/AlbinaKonovalova/booking_service/internal/config"
 )
@@ -64,6 +65,18 @@ func main() {
 	resourceHandler := handlers.NewResourceHandler(resourceService)
 	bookingHandler := handlers.NewBookingHandler(bookingService)
 
+	expirationService := application.NewExpirationService(bookingRepo, logger)
+	sched, err := scheduler.NewScheduler(expirationService, cfg.Scheduler.ExpirationInterval, cfg.Scheduler.CompletionTime, logger)
+	if err != nil {
+		logger.Error("failed to create scheduler", slog.Any("error", err))
+		os.Exit(1)
+	}
+
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	go sched.Start(ctx)
+
 	server := httpserver.NewServer(
 		cfg.Server.Port,
 		cfg.Server.ReadTimeout,
@@ -86,13 +99,15 @@ func main() {
 
 	logger.Info("shutting down server...")
 
-	ctx, cancel := context.WithTimeout(context.Background(), cfg.Server.ShutdownTimeout)
-	defer cancel()
+	cancel()
 
-	if err := server.Shutdown(ctx); err != nil {
+	shutdownCtx, shutdownCancel := context.WithTimeout(context.Background(), cfg.Server.ShutdownTimeout)
+	defer shutdownCancel()
+
+	if err := server.Shutdown(shutdownCtx); err != nil {
 		logger.Error("server forced to shutdown", slog.Any("error", err))
 	}
-
+	
 	logger.Info("server stopped")
 }
 

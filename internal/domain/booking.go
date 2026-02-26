@@ -83,3 +83,13 @@ func (b *Booking) Cancel(now time.Time) error {
 	b.Status = StatusCancelled
 	return nil
 }
+func (b *Booking) Complete(now time.Time) error {
+	if b.Status != StatusConfirmed {
+		return ErrBookingInvalidTransition
+	}
+	if now.Before(b.EndTime) {
+		return ErrBookingNotYetCompleted
+	}
+	b.Status = StatusCompleted
+	return nil
+}

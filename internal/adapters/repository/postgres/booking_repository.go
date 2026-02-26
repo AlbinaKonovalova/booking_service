@@ -136,3 +136,21 @@ func (r *BookingRepository) ListByResourceID(ctx context.Context, resourceID uui
 
 	return bookings, rows.Err()
 }
+
+func (r *BookingRepository) ExpireOverdue(ctx context.Context, now time.Time) (int64, error) {
+	query := `UPDATE bookings SET status = 'EXPIRED' WHERE status = 'CREATED' AND start_time < $1`
+	result, err := r.db.ExecContext(ctx, query, now)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected()
+}
+
+func (r *BookingRepository) CompleteFinished(ctx context.Context, now time.Time) (int64, error) {
+	query := `UPDATE bookings SET status = 'COMPLETED' WHERE status = 'CONFIRMED' AND end_time <= $1`
+	result, err := r.db.ExecContext(ctx, query, now)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected()
+}

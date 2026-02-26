@@ -49,6 +49,8 @@ type mockBookingRepo struct {
 	hasOverlapFunc       func(ctx context.Context, resourceID uuid.UUID, startTime, endTime time.Time) (bool, error)
 	hasActiveFunc        func(ctx context.Context, resourceID uuid.UUID) (bool, error)
 	listByResourceIDFunc func(ctx context.Context, resourceID uuid.UUID, status *domain.BookingStatus) ([]*domain.Booking, error)
+	expireOverdueFunc    func(ctx context.Context, now time.Time) (int64, error)
+	completeFinishedFunc func(ctx context.Context, now time.Time) (int64, error)
 }
 
 func (m *mockBookingRepo) Save(ctx context.Context, booking *domain.Booking) error {

@@ -82,7 +82,7 @@ func (s *Server) loggingMiddleware(next http.Handler) http.Handler {
 			slog.String("method", r.Method),
 			slog.String("path", r.URL.Path),
 			slog.Int("status", wrapped.statusCode),
-			slog.Duration("duration", time.Since(start)),
+			slog.String("duration", time.Since(start).String()),
 		)
 	})
 }
