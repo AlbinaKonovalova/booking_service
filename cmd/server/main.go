@@ -57,7 +57,7 @@ func main() {
 	txManager := postgres.NewTxManager(db)
 
 	// Application services
-	resourceService := application.NewResourceService(resourceRepo)
+	resourceService := application.NewResourceService(resourceRepo, bookingRepo, txManager)
 	bookingService := application.NewBookingService(bookingRepo, resourceRepo, txManager, hotelTZ)
 
 	// HTTP handlers

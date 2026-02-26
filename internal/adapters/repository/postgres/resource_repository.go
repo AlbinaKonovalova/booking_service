@@ -53,3 +53,11 @@ func (r *ResourceRepository) GetByID(ctx context.Context, id uuid.UUID) (*domain
 
 	return &res, nil
 }
+
+// Update обновляет ресурс в БД (включая removed_at для soft delete).
+func (r *ResourceRepository) Update(ctx context.Context, resource *domain.Resource) error {
+	exec := getExecutor(ctx, r.db)
+	query := `UPDATE resources SET name = $2, removed_at = $3 WHERE id = $1`
+	_, err := exec.ExecContext(ctx, query, resource.ID, resource.Name, resource.RemovedAt)
+	return err
+}

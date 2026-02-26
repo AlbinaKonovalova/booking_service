@@ -56,3 +56,25 @@ func (h *ResourceHandler) Create(w http.ResponseWriter, r *http.Request) {
 		RemovedAt: resource.RemovedAt,
 	})
 }
+
+// Delete обрабатывает DELETE /resource/{id}.
+func (h *ResourceHandler) Delete(w http.ResponseWriter, r *http.Request) {
+	id, err := uuid.Parse(r.PathValue("id"))
+	if err != nil {
+		RespondJSON(w, http.StatusBadRequest, ErrorResponse{
+			Error: "invalid resource id format",
+			Code:  "BAD_REQUEST",
+		})
+		return
+	}
+
+	if err := h.service.DeleteResource(r.Context(), id); err != nil {
+		RespondError(w, err)
+		return
+	}
+
+	RespondJSON(w, http.StatusOK, map[string]string{
+		"id":     id.String(),
+		"status": "removed",
+	})
+}
