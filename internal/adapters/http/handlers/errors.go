@@ -41,6 +41,8 @@ func mapDomainError(err error) (int, string) {
 		return http.StatusNotFound, "NOT_FOUND"
 	case errors.Is(err, domain.ErrResourceAlreadyRemoved):
 		return http.StatusGone, "ALREADY_REMOVED"
+	case errors.Is(err, domain.ErrResourceHasActiveBookings):
+		return http.StatusConflict, "HAS_ACTIVE_BOOKINGS"
 	// Booking errors
 	case errors.Is(err, domain.ErrBookingNotFound):
 		return http.StatusNotFound, "NOT_FOUND"
