@@ -28,7 +28,7 @@ type createBookingRequest struct {
 	CheckOut   string `json:"check_out"`
 }
 
-// bookingResponse — тело ответа с бронированием.
+// bookingResponse — полное тело ответа с бронированием.
 type bookingResponse struct {
 	ID         uuid.UUID `json:"id"`
 	ResourceID uuid.UUID `json:"resource_id"`
@@ -38,6 +38,12 @@ type bookingResponse struct {
 	CheckOut   time.Time `json:"check_out"`
 	Status     string    `json:"status"`
 	CreatedAt  time.Time `json:"created_at"`
+}
+
+// bookingStatusResponse — компактный ответ для операций смены статуса.
+type bookingStatusResponse struct {
+	ID     uuid.UUID `json:"id"`
+	Status string    `json:"status"`
 }
 
 // Create обрабатывает POST /booking.
@@ -85,6 +91,29 @@ func (h *BookingHandler) Create(w http.ResponseWriter, r *http.Request) {
 	}
 
 	RespondJSON(w, http.StatusCreated, toBookingResponse(booking))
+}
+
+// Confirm обрабатывает POST /booking/{id}/confirm.
+func (h *BookingHandler) Confirm(w http.ResponseWriter, r *http.Request) {
+	id, err := uuid.Parse(r.PathValue("id"))
+	if err != nil {
+		RespondJSON(w, http.StatusBadRequest, ErrorResponse{
+			Error: "invalid booking id format",
+			Code:  "BAD_REQUEST",
+		})
+		return
+	}
+
+	booking, err := h.service.ConfirmBooking(r.Context(), id)
+	if err != nil {
+		RespondError(w, err)
+		return
+	}
+
+	RespondJSON(w, http.StatusOK, bookingStatusResponse{
+		ID:     booking.ID,
+		Status: string(booking.Status),
+	})
 }
 
 func toBookingResponse(b *domain.Booking) bookingResponse {
