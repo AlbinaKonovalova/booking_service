@@ -83,6 +83,7 @@ func (s *BookingService) CreateBooking(ctx context.Context, resourceID uuid.UUID
 // Если бронирование просрочено — автоматически переводит в EXPIRED.
 func (s *BookingService) ConfirmBooking(ctx context.Context, id uuid.UUID) (*domain.Booking, error) {
 	var booking *domain.Booking
+	var domainErr error
 
 	err := s.txManager.WithTx(ctx, func(txCtx context.Context) error {
 		var err error
@@ -93,11 +94,13 @@ func (s *BookingService) ConfirmBooking(ctx context.Context, id uuid.UUID) (*dom
 
 		now := time.Now()
 		if confirmErr := booking.Confirm(now); confirmErr != nil {
-			// Если бронь автоматически истекла — сохраняем EXPIRED в БД
+			// Если бронь автоматически истекла — сохраняем EXPIRED и коммитим
 			if booking.Status == domain.StatusExpired {
 				if saveErr := s.bookingRepo.UpdateStatus(txCtx, booking); saveErr != nil {
 					return fmt.Errorf("saving expired status: %w", saveErr)
 				}
+				domainErr = confirmErr
+				return nil // коммитим транзакцию
 			}
 			return confirmErr
 		}
@@ -111,6 +114,53 @@ func (s *BookingService) ConfirmBooking(ctx context.Context, id uuid.UUID) (*dom
 
 	if err != nil {
 		return nil, err
+	}
+
+	if domainErr != nil {
+		return nil, domainErr
+	}
+
+	return booking, nil
+}
+
+// CancelBooking отменяет бронирование (CREATED/CONFIRMED → CANCELLED).
+// Если бронирование просрочено — автоматически переводит в EXPIRED.
+func (s *BookingService) CancelBooking(ctx context.Context, id uuid.UUID) (*domain.Booking, error) {
+	var booking *domain.Booking
+	var domainErr error
+
+	err := s.txManager.WithTx(ctx, func(txCtx context.Context) error {
+		var err error
+		booking, err = s.bookingRepo.GetByID(txCtx, id)
+		if err != nil {
+			return err
+		}
+
+		now := time.Now()
+		if cancelErr := booking.Cancel(now); cancelErr != nil {
+			// Если бронь автоматически истекла — сохраняем EXPIRED и коммитим
+			if booking.Status == domain.StatusExpired {
+				if saveErr := s.bookingRepo.UpdateStatus(txCtx, booking); saveErr != nil {
+					return fmt.Errorf("saving expired status: %w", saveErr)
+				}
+				domainErr = cancelErr
+				return nil // коммитим транзакцию
+			}
+			return cancelErr
+		}
+
+		if err := s.bookingRepo.UpdateStatus(txCtx, booking); err != nil {
+			return fmt.Errorf("saving cancelled status: %w", err)
+		}
+
+		return nil
+	})
+
+	if err != nil {
+		return nil, err
+	}
+	if domainErr != nil {
+		return nil, domainErr
 	}
 
 	return booking, nil
