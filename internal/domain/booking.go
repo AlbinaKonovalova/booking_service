@@ -83,12 +83,3 @@ func (b *Booking) Cancel(now time.Time) error {
 	b.Status = StatusCancelled
 	return nil
 }
-
-// Expire переводит бронирование в статус EXPIRED.
-func (b *Booking) Expire() error {
-	if b.Status != StatusCreated {
-		return ErrBookingInvalidTransition
-	}
-	b.Status = StatusExpired
-	return nil
-}

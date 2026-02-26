@@ -116,6 +116,29 @@ func (h *BookingHandler) Confirm(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
+// Cancel обрабатывает POST /booking/{id}/cancel.
+func (h *BookingHandler) Cancel(w http.ResponseWriter, r *http.Request) {
+	id, err := uuid.Parse(r.PathValue("id"))
+	if err != nil {
+		RespondJSON(w, http.StatusBadRequest, ErrorResponse{
+			Error: "invalid booking id format",
+			Code:  "BAD_REQUEST",
+		})
+		return
+	}
+
+	booking, err := h.service.CancelBooking(r.Context(), id)
+	if err != nil {
+		RespondError(w, err)
+		return
+	}
+
+	RespondJSON(w, http.StatusOK, bookingStatusResponse{
+		ID:     booking.ID,
+		Status: string(booking.Status),
+	})
+}
+
 func toBookingResponse(b *domain.Booking) bookingResponse {
 	return bookingResponse{
 		ID:         b.ID,
