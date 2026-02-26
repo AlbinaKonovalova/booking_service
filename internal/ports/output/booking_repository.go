@@ -17,4 +17,6 @@ type BookingRepository interface {
 	HasOverlap(ctx context.Context, resourceID uuid.UUID, startTime, endTime time.Time) (bool, error)
 	HasActiveByResourceID(ctx context.Context, resourceID uuid.UUID) (bool, error)
 	ListByResourceID(ctx context.Context, resourceID uuid.UUID, status *domain.BookingStatus) ([]*domain.Booking, error)
+	ExpireOverdue(ctx context.Context, now time.Time) (int64, error)
+	CompleteFinished(ctx context.Context, now time.Time) (int64, error)
 }
