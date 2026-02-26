@@ -151,3 +151,34 @@ func toBookingResponse(b *domain.Booking) bookingResponse {
 		CreatedAt:  b.CreatedAt,
 	}
 }
+
+// ListByResource обрабатывает GET /resource/{id}/bookings.
+func (h *BookingHandler) ListByResource(w http.ResponseWriter, r *http.Request) {
+	resourceID, err := uuid.Parse(r.PathValue("id"))
+	if err != nil {
+		RespondJSON(w, http.StatusBadRequest, ErrorResponse{
+			Error: "invalid resource id format",
+			Code:  "BAD_REQUEST",
+		})
+		return
+	}
+
+	var status *domain.BookingStatus
+	if s := r.URL.Query().Get("status"); s != "" {
+		bs := domain.BookingStatus(s)
+		status = &bs
+	}
+
+	bookings, err := h.service.ListBookingsByResource(r.Context(), resourceID, status)
+	if err != nil {
+		RespondError(w, err)
+		return
+	}
+
+	resp := make([]bookingResponse, 0, len(bookings))
+	for _, b := range bookings {
+		resp = append(resp, toBookingResponse(b))
+	}
+
+	RespondJSON(w, http.StatusOK, resp)
+}

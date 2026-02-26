@@ -14,4 +14,5 @@ type BookingService interface {
 	CreateBooking(ctx context.Context, resourceID uuid.UUID, checkIn, checkOut time.Time) (*domain.Booking, error)
 	ConfirmBooking(ctx context.Context, id uuid.UUID) (*domain.Booking, error)
 	CancelBooking(ctx context.Context, id uuid.UUID) (*domain.Booking, error)
+	ListBookingsByResource(ctx context.Context, resourceID uuid.UUID, status *domain.BookingStatus) ([]*domain.Booking, error)
 }

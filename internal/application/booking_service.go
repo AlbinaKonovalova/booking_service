@@ -165,3 +165,13 @@ func (s *BookingService) CancelBooking(ctx context.Context, id uuid.UUID) (*doma
 
 	return booking, nil
 }
+
+// ListBookingsByResource возвращает список бронирований ресурса с опциональной фильтрацией по статусу.
+func (s *BookingService) ListBookingsByResource(ctx context.Context, resourceID uuid.UUID, status *domain.BookingStatus) ([]*domain.Booking, error) {
+	// Проверяем что ресурс существует
+	if _, err := s.resourceRepo.GetByID(ctx, resourceID); err != nil {
+		return nil, err
+	}
+
+	return s.bookingRepo.ListByResourceID(ctx, resourceID, status)
+}

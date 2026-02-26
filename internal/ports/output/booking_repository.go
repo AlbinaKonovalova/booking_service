@@ -16,4 +16,5 @@ type BookingRepository interface {
 	UpdateStatus(ctx context.Context, booking *domain.Booking) error
 	HasOverlap(ctx context.Context, resourceID uuid.UUID, startTime, endTime time.Time) (bool, error)
 	HasActiveByResourceID(ctx context.Context, resourceID uuid.UUID) (bool, error)
+	ListByResourceID(ctx context.Context, resourceID uuid.UUID, status *domain.BookingStatus) ([]*domain.Booking, error)
 }

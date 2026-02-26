@@ -56,6 +56,7 @@ func (s *Server) setupRoutes() *http.ServeMux {
 	// Resource endpoints
 	mux.HandleFunc("POST /resource", s.resourceHandler.Create)
 	mux.HandleFunc("DELETE /resource/{id}", s.resourceHandler.Delete)
+	mux.HandleFunc("GET /resource/{id}/bookings", s.bookingHandler.ListByResource)
 
 	// Booking endpoints
 	mux.HandleFunc("POST /booking", s.bookingHandler.Create)
