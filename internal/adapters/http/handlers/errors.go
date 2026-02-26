@@ -3,6 +3,7 @@ package handlers
 import (
 	"encoding/json"
 	"errors"
+	"log/slog"
 	"net/http"
 
 	"github.com/AlbinaKonovalova/booking_service/internal/domain"
@@ -24,8 +25,18 @@ func RespondJSON(w http.ResponseWriter, status int, data any) {
 }
 
 // RespondError маппит доменную ошибку в HTTP-ответ.
+// При 500 логирует ошибку и скрывает детали от клиента.
 func RespondError(w http.ResponseWriter, err error) {
 	status, code := mapDomainError(err)
+	if status == http.StatusInternalServerError {
+		slog.Error("internal server error", slog.Any("error", err))
+		RespondJSON(w, status, ErrorResponse{
+			Error: "internal server error",
+			Code:  code,
+		})
+		return
+	}
+
 	RespondJSON(w, status, ErrorResponse{
 		Error: err.Error(),
 		Code:  code,

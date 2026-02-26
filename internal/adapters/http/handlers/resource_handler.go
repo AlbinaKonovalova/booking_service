@@ -32,13 +32,19 @@ type resourceResponse struct {
 	RemovedAt *time.Time `json:"removed_at,omitempty"`
 }
 
+// resourceStatusResponse — компактный ответ для операций смены состояния ресурса.
+type resourceStatusResponse struct {
+	ID     uuid.UUID `json:"id"`
+	Status string    `json:"status"`
+}
+
 // Create обрабатывает POST /resource.
 func (h *ResourceHandler) Create(w http.ResponseWriter, r *http.Request) {
 	var req createResourceRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		RespondJSON(w, http.StatusBadRequest, map[string]string{
-			"error": "invalid request body",
-			"code":  "BAD_REQUEST",
+		RespondJSON(w, http.StatusBadRequest, ErrorResponse{
+			Error: "invalid request body",
+			Code:  "BAD_REQUEST",
 		})
 		return
 	}
@@ -73,8 +79,8 @@ func (h *ResourceHandler) Delete(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	RespondJSON(w, http.StatusOK, map[string]string{
-		"id":     id.String(),
-		"status": "removed",
+	RespondJSON(w, http.StatusOK, resourceStatusResponse{
+		ID:     id,
+		Status: "removed",
 	})
 }
