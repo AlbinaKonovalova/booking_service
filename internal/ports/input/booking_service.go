@@ -12,4 +12,5 @@ import (
 // BookingService — входящий порт для операций с бронированиями.
 type BookingService interface {
 	CreateBooking(ctx context.Context, resourceID uuid.UUID, checkIn, checkOut time.Time) (*domain.Booking, error)
+	ConfirmBooking(ctx context.Context, id uuid.UUID) (*domain.Booking, error)
 }

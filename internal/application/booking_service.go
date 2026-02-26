@@ -78,3 +78,40 @@ func (s *BookingService) CreateBooking(ctx context.Context, resourceID uuid.UUID
 
 	return booking, nil
 }
+
+// ConfirmBooking подтверждает бронирование (CREATED → CONFIRMED).
+// Если бронирование просрочено — автоматически переводит в EXPIRED.
+func (s *BookingService) ConfirmBooking(ctx context.Context, id uuid.UUID) (*domain.Booking, error) {
+	var booking *domain.Booking
+
+	err := s.txManager.WithTx(ctx, func(txCtx context.Context) error {
+		var err error
+		booking, err = s.bookingRepo.GetByID(txCtx, id)
+		if err != nil {
+			return err
+		}
+
+		now := time.Now()
+		if confirmErr := booking.Confirm(now); confirmErr != nil {
+			// Если бронь автоматически истекла — сохраняем EXPIRED в БД
+			if booking.Status == domain.StatusExpired {
+				if saveErr := s.bookingRepo.UpdateStatus(txCtx, booking); saveErr != nil {
+					return fmt.Errorf("saving expired status: %w", saveErr)
+				}
+			}
+			return confirmErr
+		}
+
+		if err := s.bookingRepo.UpdateStatus(txCtx, booking); err != nil {
+			return fmt.Errorf("saving confirmed status: %w", err)
+		}
+
+		return nil
+	})
+
+	if err != nil {
+		return nil, err
+	}
+
+	return booking, nil
+}

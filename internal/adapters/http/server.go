@@ -58,6 +58,7 @@ func (s *Server) setupRoutes() *http.ServeMux {
 
 	// Booking endpoints
 	mux.HandleFunc("POST /booking", s.bookingHandler.Create)
+	mux.HandleFunc("POST /booking/{id}/confirm", s.bookingHandler.Confirm)
 
 	return mux
 }
