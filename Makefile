@@ -49,3 +49,19 @@ clean:
 	rm -rf bin/
 	rm -f coverage.out coverage.html
 
+# Docker
+docker-build:
+	docker build -t booking_service .
+
+docker-run:
+	docker-compose up -d --build
+
+docker-down:
+	docker-compose down
+
+docker-logs:
+	docker-compose logs -f app
+
+docker-reset:
+	docker-compose down -v
+	docker-compose up -d --build
