@@ -101,3 +101,38 @@ func (r *BookingRepository) HasActiveByResourceID(ctx context.Context, resourceI
 	err := exec.QueryRowContext(ctx, query, resourceID).Scan(&exists)
 	return exists, err
 }
+
+// ListByResourceID возвращает бронирования ресурса с опциональной фильтрацией по статусу.
+func (r *BookingRepository) ListByResourceID(ctx context.Context, resourceID uuid.UUID, status *domain.BookingStatus) ([]*domain.Booking, error) {
+	exec := getExecutor(ctx, r.db)
+
+	query := `SELECT id, resource_id, start_time, end_time, check_in, check_out, status, created_at
+		FROM bookings WHERE resource_id = $1`
+	args := []any{resourceID}
+
+	if status != nil {
+		query += ` AND status = $2`
+		args = append(args, string(*status))
+	}
+
+	query += ` ORDER BY start_time`
+
+	rows, err := exec.QueryContext(ctx, query, args...)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var bookings []*domain.Booking
+	for rows.Next() {
+		var b domain.Booking
+		var st string
+		if err := rows.Scan(&b.ID, &b.ResourceID, &b.StartTime, &b.EndTime, &b.CheckIn, &b.CheckOut, &st, &b.CreatedAt); err != nil {
+			return nil, err
+		}
+		b.Status = domain.BookingStatus(st)
+		bookings = append(bookings, &b)
+	}
+
+	return bookings, rows.Err()
+}
